@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NovaStore - Administración & Terminal Punto de Venta (POS)</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <!-- Header Principal -->
+  <header class="app-header">
+    <div class="logo-area">
+      <span class="logo-badge">POS</span>
+      <h1>NovaStore Admin & Caja</h1>
+    </div>
+    <div class="header-status">
+      <span class="status-indicator online"></span>
+      <span>Caja #01 - Turno Abierto</span>
+      <span class="cashier-name">Cajero: Juan Pérez</span>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal de Dos Columnas -->
+  <div class="dashboard-layout">
+    
+    <!-- Columna Izquierda: Administración & Catálogo -->
+    <main class="admin-panel">
+      <!-- Métricas rápidas de Administración -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-title">Ventas Hoy</span>
+          <span class="metric-value">$12,450.00</span>
+          <span class="metric-trend positive">+14% vs ayer</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Tickets Cobrados</span>
+          <span class="metric-value">38</span>
+          <span class="metric-trend neutral">Promedio: $327.60</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Fondo de Caja</span>
+          <span class="metric-value">$1,500.00</span>
+          <span class="metric-trend">Inicial</span>
+        </div>
+        <div class="metric-card alert">
+          <span class="metric-title">Alertas Stock</span>
+          <span class="metric-value">2 prod.</span>
+          <span class="metric-trend negative">Reabastecer</span>
+        </div>
+      </section>
+
+      <!-- Catálogo de Productos para la Caja -->
+      <section class="catalog-section">
+        <div class="catalog-header">
+          <h2>Catálogo de Productos</h2>
+          <div class="search-bar">
+            <input type="text" id="productSearch" placeholder="Buscar por nombre o código...">
+          </div>
+        </div>
+
+        <div class="category-filters">
+          <button class="filter-btn active" data-category="all">Todos</button>
+          <button class="filter-btn" data-category="bebidas">Bebidas</button>
+          <button class="filter-btn" data-category="alimentos">Alimentos</button>
+          <button class="filter-btn" data-category="limpieza">Limpieza</button>
+          <button class="filter-btn" data-category="tecnologia">Tecnología</button>
+        </div>
+
+        <div class="products-grid" id="productsGrid">
+          <!-- Se cargan dinámicamente con TypeScript -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Columna Derecha: Terminal de Caja (POS) -->
+    <aside class="pos-terminal">
+      <div class="terminal-card">
+        <div class="terminal-header">
+          <h2>Caja Registradora</h2>
+          <button id="btnClearCart" class="btn-secondary-sm">Vaciar</button>
+        </div>
+
+        <!-- Lista del Carrito de Compras -->
+        <div class="cart-items-container" id="cartContainer">
+          <div class="empty-cart-msg" id="emptyCartMsg">
+            No hay productos agregados a la caja.
+          </div>
+          <ul class="cart-list" id="cartList"></ul>
+        </div>
+
+        <!-- Resumen Financiero y Cálculos -->
+        <div class="checkout-summary">
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span id="txtSubtotal">$0.00</span>
+          </div>
+
+          <div class="summary-row">
+            <label for="inputDiscount">Descuento ($):</label>
+            <input type="number" id="inputDiscount" min="0" value="0" class="input-inline">
+          </div>
+
+          <div class="summary-row">
+            <span>IVA (16%):</span>
+            <span id="txtTax">$0.00</span>
+          </div>
+
+          <div class="summary-row total-highlight">
+            <span>TOTAL A COBRAR:</span>
+            <span id="txtTotal">$0.00</span>
+          </div>
+        </div>
+
+        <!-- Sección de Cobro y Pago -->
+        <form class="payment-box" id="paymentForm">
+          <div class="form-group">
+            <label for="selectPaymentMethod">Forma de Pago:</label>
+            <select id="selectPaymentMethod">
+              <option value="cash">Efectivo</option>
+              <option value="card">Tarjeta Débito/Crédito</option>
+              <option value="transfer">Transferencia SPEI</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="cashPaymentGroup">
+            <label for="inputCashReceived">Efectivo Recibido ($):</label>
+            <input type="number" id="inputCashReceived" step="0.50" min="0" placeholder="0.00">
+          </div>
+
+          <div class="change-display">
+            <span>Cambio a Devolver:</span>
+            <strong id="txtChange">$0.00</strong>
+          </div>
+
+          <button type="submit" id="btnCheckout" class="btn-checkout">
+            Cobrar y Generar Ticket
+          </button>
+        </form>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modal de Ticket / Recibo de Venta -->
+  <div class="modal-overlay hidden" id="ticketModal">
+    <div class="modal-content">
+      <div class="ticket-receipt" id="ticketReceipt">
+        <!-- Generado dinámicamente -->
+      </div>
+      <button id="btnCloseModal" class="btn-modal-close">Cerrar Ticket</button>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
