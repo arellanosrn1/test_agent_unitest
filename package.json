@@ -14,5 +14,15 @@
     "tsx": "^4.23.13",
     "typescript": "^5.4.5",
     "vite": "^5.2.11"
+  },
+  "jest": {
+    "coverageThreshold": {
+      "global": {
+        "branches": 85.0,
+        "functions": 85.0,
+        "lines": 85.0,
+        "statements": 85.0
+      }
+    }
   }
 }
