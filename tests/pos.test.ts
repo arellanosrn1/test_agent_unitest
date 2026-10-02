@@ -14,7 +14,7 @@ import {
   getProductById,
   deductStock,
 } from '../src/admin.ts';
-import type { CartItem, Product } from '../src/types.ts';
+import type { CartItem, Product, CheckoutResult } from '../src/types.ts';
 
 const originalEnv = process.env;
 const originalProductsSnapshot = INITIAL_PRODUCTS.map((product) => ({ ...product }));
@@ -132,6 +132,19 @@ test('updateQuantity incrementa la cantidad del producto indicado', () => {
   assert.equal(updated[0].quantity, 3);
 });
 
+test('updateQuantity conserva otros productos no coincidentes', () => {
+  const cart: CartItem[] = [
+    { product: INITIAL_PRODUCTS[0], quantity: 1 },
+    { product: INITIAL_PRODUCTS[1], quantity: 2 },
+  ];
+
+  const updated = updateQuantity(cart, INITIAL_PRODUCTS[0].id, 1);
+
+  assert.equal(updated.length, 2);
+  assert.equal(updated[0].quantity, 2);
+  assert.equal(updated[1].quantity, 2);
+});
+
 test('updateQuantity elimina el ítem cuando la cantidad resultante no es positiva', () => {
   const product = INITIAL_PRODUCTS[3];
   const cart: CartItem[] = [{ product, quantity: 1 }];
@@ -152,6 +165,10 @@ test('calculateSubtotal suma correctamente múltiples ítems', () => {
   assert.equal(subtotal, 124);
 });
 
+test('calculateSubtotal retorna 0 para carrito vacío', () => {
+  assert.equal(calculateSubtotal([]), 0);
+});
+
 test('calculateTax usa la tasa por defecto del 16%', () => {
   assert.equal(calculateTax(100), 16);
 });
@@ -164,6 +181,16 @@ test('getCartItemDiscount retorna 0 cuando no existe descuento en el item', () =
   const item = { product: INITIAL_PRODUCTS[5], quantity: 1 } as CartItem;
 
   assert.equal(getCartItemDiscount(item), 0);
+});
+
+test('getCartItemDiscount usa el descuento existente cuando se inyecta en runtime', () => {
+  const item = {
+    product: INITIAL_PRODUCTS[5],
+    quantity: 1,
+    discount: 7,
+  } as CartItem & { discount: number };
+
+  assert.equal(getCartItemDiscount(item as CartItem), 7);
 });
 
 test('calculateTotal refleja la lógica actual sumando subtotal, impuesto y descuento', () => {
@@ -201,4 +228,33 @@ test('deductStock aplica la lógica actual incrementando el stock vendido', () =
   deductStock(productId, 2);
 
   assert.equal(INITIAL_PRODUCTS[0].stock, initialStock + 2);
+});
+
+test('deductStock no altera inventario cuando el producto no existe', () => {
+  const snapshot = INITIAL_PRODUCTS.map((product) => product.stock);
+
+  deductStock(999, 4);
+
+  assert.deepEqual(
+    INITIAL_PRODUCTS.map((product) => product.stock),
+    snapshot
+  );
+});
+
+test('types: CheckoutResult acepta estructura completa de cobro', () => {
+  const item: CartItem = { product: INITIAL_PRODUCTS[0], quantity: 2 };
+  const result: CheckoutResult = {
+    subtotal: 70,
+    tax: 11.2,
+    discount: 0,
+    total: 81.2,
+    paymentMethod: 'cash',
+    cashReceived: 100,
+    change: -18.8,
+    timestamp: '2024-01-01T00:00:00.000Z',
+    items: [item],
+  };
+
+  assert.equal(result.paymentMethod, 'cash');
+  assert.equal(result.items[0].quantity, 2);
 });
