@@ -35,13 +35,15 @@ test.beforeEach(() => {
 test.afterEach(() => {
   restoreProducts();
   process.env = originalEnv;
+  if (globalThis.fetch) {
+    delete (globalThis as typeof globalThis & { fetch?: typeof fetch }).fetch;
+  }
 });
 
 test('Criteria 101: autenticación exitosa retorna 200 y token JWT simulado con credenciales válidas', async () => {
   const validCredentials = { username: 'admin', password: 'secreta123' };
-  const originalFetch = globalThis.fetch;
 
-  const fetchSpy = async (input: string | URL | Request) => {
+  globalThis.fetch = (async (input: string | URL | Request) => {
     assert.equal(String(input), 'https://auth.local/login');
     return {
       ok: true,
@@ -51,55 +53,42 @@ test('Criteria 101: autenticación exitosa retorna 200 y token JWT simulado con 
         user: { username: validCredentials.username },
       }),
     } as Response;
-  };
+  }) as typeof fetch;
 
-  globalThis.fetch = fetchSpy as typeof fetch;
+  const response = await fetch('https://auth.local/login', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.TEST_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(validCredentials),
+  });
 
-  try {
-    const response = await fetch('https://auth.local/login', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.TEST_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(validCredentials),
-    });
+  const body = await response.json() as { token: string; user: { username: string } };
 
-    const body = await response.json() as { token: string; user: { username: string } };
-
-    assert.equal(response.status, 200);
-    assert.equal(body.token, 'mock-jwt-token');
-    assert.equal(body.user.username, 'admin');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  assert.equal(response.status, 200);
+  assert.equal(body.token, 'mock-jwt-token');
+  assert.equal(body.user.username, 'admin');
 });
 
 test('Criteria 102: autenticación inválida retorna 401 cuando usuario o contraseña no existen', async () => {
   const invalidCredentials = { username: 'ghost', password: 'bad-pass' };
-  const originalFetch = globalThis.fetch;
 
-  const fetchSpy = async () => ({
+  globalThis.fetch = (async () => ({
     ok: false,
     status: 401,
     json: async () => ({ message: 'Unauthorized' }),
-  } as Response);
+  } as Response)) as typeof fetch;
 
-  globalThis.fetch = fetchSpy as typeof fetch;
+  const response = await fetch('https://auth.local/login', {
+    method: 'POST',
+    body: JSON.stringify(invalidCredentials),
+  });
 
-  try {
-    const response = await fetch('https://auth.local/login', {
-      method: 'POST',
-      body: JSON.stringify(invalidCredentials),
-    });
+  const body = await response.json() as { message: string };
 
-    const body = await response.json() as { message: string };
-
-    assert.equal(response.status, 401);
-    assert.equal(body.message, 'Unauthorized');
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  assert.equal(response.status, 401);
+  assert.equal(body.message, 'Unauthorized');
 });
 
 test('addToCart agrega un producto nuevo con cantidad inicial 1', () => {
@@ -141,6 +130,21 @@ test('updateQuantity elimina el ítem cuando la cantidad resultante no es positi
   assert.equal(updated.length, 0);
 });
 
+test('updateQuantity deja intactos los productos no coincidentes', () => {
+  const first = INITIAL_PRODUCTS[0];
+  const second = INITIAL_PRODUCTS[1];
+  const cart: CartItem[] = [
+    { product: first, quantity: 1 },
+    { product: second, quantity: 2 },
+  ];
+
+  const updated = updateQuantity(cart, first.id, 1);
+
+  assert.equal(updated.length, 2);
+  assert.equal(updated[0].quantity, 2);
+  assert.equal(updated[1].quantity, 2);
+});
+
 test('calculateSubtotal suma correctamente múltiples ítems', () => {
   const cart: CartItem[] = [
     { product: INITIAL_PRODUCTS[0], quantity: 2 },
@@ -150,6 +154,10 @@ test('calculateSubtotal suma correctamente múltiples ítems', () => {
   const subtotal = calculateSubtotal(cart);
 
   assert.equal(subtotal, 124);
+});
+
+test('calculateSubtotal retorna 0 con carrito vacío', () => {
+  assert.equal(calculateSubtotal([]), 0);
 });
 
 test('calculateTax usa la tasa por defecto del 16%', () => {
@@ -164,6 +172,16 @@ test('getCartItemDiscount retorna 0 cuando no existe descuento en el item', () =
   const item = { product: INITIAL_PRODUCTS[5], quantity: 1 } as CartItem;
 
   assert.equal(getCartItemDiscount(item), 0);
+});
+
+test('getCartItemDiscount retorna el valor discount cuando existe en runtime', () => {
+  const item = {
+    product: INITIAL_PRODUCTS[5],
+    quantity: 1,
+    discount: 7,
+  } as CartItem & { discount: number };
+
+  assert.equal(getCartItemDiscount(item), 7);
 });
 
 test('calculateTotal refleja la lógica actual sumando subtotal, impuesto y descuento', () => {
@@ -201,4 +219,12 @@ test('deductStock aplica la lógica actual incrementando el stock vendido', () =
   deductStock(productId, 2);
 
   assert.equal(INITIAL_PRODUCTS[0].stock, initialStock + 2);
+});
+
+test('deductStock no hace cambios cuando el producto no existe', () => {
+  const snapshot = INITIAL_PRODUCTS.map((product) => ({ ...product }));
+
+  deductStock(999, 3);
+
+  assert.deepEqual(INITIAL_PRODUCTS, snapshot);
 });
