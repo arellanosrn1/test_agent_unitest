@@ -15,7 +15,7 @@ export interface CartItem {
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer';
 
-export interface CheckoutResult {
+interface CheckoutResult {
   subtotal: number;
   tax: number;
   discount: number;
